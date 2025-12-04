@@ -1,30 +1,14 @@
 # golens
 
-GoLens is a reverse proxy that sits between your agent and your LLM of choice and captures events for every interaction without blocking the request stream.
+## Problem
 
-## Architecture
+When an Agent fails, is slow, or burns through $50 in an hour, we have no easy way to answer "Why?". Current solutions focus on manual instrumentation, forcing engineers to litter their business logic with SDK calls. Furthermore, most tools rely on metrics. But we need high-cardinality, wide events that capture the full context of every single interaction.
 
-```mermaid
-graph LR
-    Agent[Your Agent] --> GoLens[GoLens Proxy]
-    GoLens --> LLM[Your LLM]
-    
-    subgraph "Observability"
-        GoLens --> ClickHouse[ClickHouse]
-    end
-```
+## Solution
 
-## Features
+GoLens is a reverse proxy that sits between your agent and your LLM of choice and captures events for every interaction without blocking the request stream. We are effectively building a wire tap between your agent and your LLM.
 
-GoLens emits a single event for every interaction that includes:
-
-* Request Context: Headers, User IDs, Model Params
-* Performance: Duration, Time to First Token (TTFT)
-* Cost: Token Costs
-* Content: Full prompt (redaction capable)
-
-## Usage
-
+### Usage
 1. Configure
 ```yaml
 proxy:
@@ -38,4 +22,16 @@ observability:
 3. Point your Agent to GoLens
 ```bash
 export OPENAI_BASE_URL="http://localhost:8080/v1"
+```
+
+### Architecture
+
+```mermaid
+graph LR
+    Agent[Your Agent] --> GoLens[GoLens Proxy]
+    GoLens --> LLM[Your LLM]
+    
+    subgraph "Observability"
+        GoLens --> ClickHouse[ClickHouse]
+    end
 ```
