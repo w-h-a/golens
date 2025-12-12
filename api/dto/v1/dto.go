@@ -12,5 +12,5 @@ type Request struct {
 type Response struct {
 	StatusCode int
 	Headers    map[string][]string
-	Body       io.Reader
+	Body       io.ReadCloser
 }
