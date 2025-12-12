@@ -14,7 +14,7 @@ func WithRspBody(rsp string) sender.Option {
 	}
 }
 
-func getRspBodyFromCtx(ctx context.Context) (string, bool) {
+func RspBodyFrom(ctx context.Context) (string, bool) {
 	rsp, ok := ctx.Value(rspBodyKey{}).(string)
 	return rsp, ok
 }
