@@ -1,17 +1,18 @@
 package http
 
 import (
-	"context"
+	"fmt"
+	"math/rand"
 	"net/http"
-	"strings"
+	"time"
 )
 
-func ReqToCtx(r *http.Request) context.Context {
-	ctx := r.Context()
-
-	for k, v := range r.Header {
-		ctx = context.WithValue(ctx, strings.ToLower(k), v[0])
+func GetTraceId(r *http.Request) string {
+	if id := r.Header.Get("traceparent"); len(id) > 0 {
+		return id
 	}
 
-	return ctx
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	return fmt.Sprintf("00-%016x%016x-%016x-01", rnd.Uint64(), rnd.Uint64(), rnd.Uint64())
 }

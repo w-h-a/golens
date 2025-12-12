@@ -16,6 +16,7 @@ import (
 	v1dto "github.com/w-h-a/golens/api/dto/v1"
 	v1event "github.com/w-h-a/golens/api/event/v1"
 	"github.com/w-h-a/golens/internal/client/sender"
+	"github.com/w-h-a/golens/internal/util"
 )
 
 // TODO: make configurable
@@ -95,9 +96,10 @@ func (w *Wire) stop(ctx context.Context) error {
 }
 
 func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1dto.Response, error) {
-	// TODO: try to extract via W3C trace standard
+	traceId, _ := util.TraceIdFrom(ctx)
+
 	event := &v1event.Event{
-		TraceID:   "trace-" + fmt.Sprint(time.Now().UnixNano()),
+		TraceID:   traceId,
 		StartTime: time.Now(),
 		Model:     "unknown",
 	}

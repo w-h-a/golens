@@ -29,7 +29,7 @@ func NewSender(opts ...sender.Option) sender.V1Sender {
 		options: options,
 	}
 
-	if rsp, ok := getRspBodyFromCtx(options.Context); ok {
+	if rsp, ok := RspBodyFrom(options.Context); ok {
 		s.rspBody = rsp
 	}
 

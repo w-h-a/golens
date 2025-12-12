@@ -8,6 +8,7 @@ import (
 	v1 "github.com/w-h-a/golens/api/dto/v1"
 	httphandler "github.com/w-h-a/golens/internal/handler/http"
 	"github.com/w-h-a/golens/internal/service/wire"
+	"github.com/w-h-a/golens/internal/util"
 )
 
 type rootHandler struct {
@@ -15,7 +16,9 @@ type rootHandler struct {
 }
 
 func (h *rootHandler) Handle(w http.ResponseWriter, r *http.Request) {
-	ctx := httphandler.ReqToCtx(r)
+	traceId := httphandler.GetTraceId(r)
+
+	ctx := util.WithTraceID(r.Context(), traceId)
 
 	req := &v1.Request{
 		Method:  r.Method,
