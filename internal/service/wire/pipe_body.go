@@ -6,7 +6,6 @@ type pipeBody struct {
 	io.Reader
 	originalBody io.Closer
 	pw           *io.PipeWriter
-	onFinish     func()
 }
 
 func (b *pipeBody) Read(p []byte) (n int, err error) {
@@ -19,8 +18,5 @@ func (b *pipeBody) Read(p []byte) (n int, err error) {
 
 func (b *pipeBody) Close() error {
 	b.pw.Close()
-	if b.onFinish != nil {
-		b.onFinish()
-	}
 	return b.originalBody.Close()
 }

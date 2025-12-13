@@ -10,8 +10,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/urfave/cli/v2"
+	"github.com/w-h-a/golens/internal/client/saver"
+	noopsaver "github.com/w-h-a/golens/internal/client/saver/noop"
 	"github.com/w-h-a/golens/internal/client/sender"
-	v1 "github.com/w-h-a/golens/internal/client/sender/v1"
+	v1sender "github.com/w-h-a/golens/internal/client/sender/v1"
 	roothttphandler "github.com/w-h-a/golens/internal/handler/http/root"
 	"github.com/w-h-a/golens/internal/server"
 	httpserver "github.com/w-h-a/golens/internal/server/http"
@@ -23,12 +25,17 @@ func Run(c *cli.Context) error {
 
 	stopChannels := map[string]chan struct{}{}
 
-	s, err := InitV1Sender(ctx, "https://api.openai.com")
+	senderClient, err := InitV1Sender(ctx, "https://api.openai.com")
 	if err != nil {
 		return err
 	}
 
-	p := wire.New(s)
+	saverClient, err := InitV1Saver(ctx, "")
+	if err != nil {
+		return err
+	}
+
+	p := wire.New(senderClient, saverClient)
 	stopChannels["proxy"] = make(chan struct{})
 
 	httpSrv, err := InitHttpServer(ctx, ":8090", p)
@@ -77,14 +84,21 @@ func Run(c *cli.Context) error {
 	return nil
 }
 
-// TODO: if we end up with wrappers around v1, the user can configure that here
+// TODO: accept user configuration
 func InitV1Sender(ctx context.Context, baseURL string) (sender.V1Sender, error) {
-	return v1.NewSender(
+	return v1sender.NewSender(
 		sender.WithBaseURL(baseURL),
 	), nil
 }
 
-// TODO: if we end up with wrappers/middleware or also being fronted by grpc, the user can configure that here
+// TODO: accept user configuration
+func InitV1Saver(ctx context.Context, loc string) (saver.V1Saver, error) {
+	return noopsaver.NewSaver(
+		saver.WithLocation(loc),
+	), nil
+}
+
+// TODO: accept user configuration
 func InitHttpServer(ctx context.Context, httpAddr string, w *wire.Wire) (server.Server, error) {
 	srv := httpserver.NewServer(
 		server.WithAddress(httpAddr),

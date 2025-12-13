@@ -15,6 +15,7 @@ import (
 
 	v1dto "github.com/w-h-a/golens/api/dto/v1"
 	v1event "github.com/w-h-a/golens/api/event/v1"
+	"github.com/w-h-a/golens/internal/client/saver"
 	"github.com/w-h-a/golens/internal/client/sender"
 	"github.com/w-h-a/golens/internal/util"
 )
@@ -26,6 +27,7 @@ const (
 
 type Wire struct {
 	sender    sender.V1Sender
+	saver     saver.V1Saver
 	isRunning bool
 	mtx       sync.RWMutex
 }
@@ -98,6 +100,8 @@ func (w *Wire) stop(ctx context.Context) error {
 func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1dto.Response, error) {
 	traceId, _ := util.TraceIdFrom(ctx)
 
+	// TODO: capture request body
+
 	event := &v1event.Event{
 		TraceId:   traceId,
 		StartTime: time.Now(),
@@ -111,31 +115,36 @@ func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1d
 
 	event.StatusCode = rsp.StatusCode
 
-	// (see below for main highway)
-	// off-ramp whenever the tee reader pulls from LLM
-	// it will write to pw
-	// pr will read from pw
-	// build the off-ramp first
 	pr, pw := io.Pipe()
-
-	// main highway LLM -> tee -> client/agent
-	// but tee will divert to the off-ramp pw -> pr
 	tee := io.TeeReader(rsp.Body, pw)
 
 	go func() {
+		if onDone != nil {
+			defer onDone()
+		}
+
 		defer pr.Close()
+
 		w.ProcessStream(ctx, pr, event)
 
-		// temporary
-		log.Printf("[Event] Trace: %s | Status: %d | Tokens: %d | Model: %s | Dur: %dms | Rsp: %s",
-			event.TraceId, event.StatusCode, event.TokenCount, event.Model, event.DurationMs, event.Response)
+		// create a detached context so if the user cancels, the db save still happens.
+		saveCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		event.EndTime = time.Now()
+		event.DurationMs = event.EndTime.Sub(event.StartTime).Milliseconds()
+
+		if err := w.saver.Save(saveCtx, event); err != nil {
+			log.Printf("[Wire] failed to save event: %v", err)
+		} else {
+			log.Printf("[Wire] saved log trace=%s model=%s tokens=%d", event.TraceId, event.Model, event.TokenCount)
+		}
 	}()
 
 	wrappedBody := &pipeBody{
 		Reader:       tee,
 		originalBody: rsp.Body,
 		pw:           pw,
-		onFinish:     onDone,
 	}
 
 	return &v1dto.Response{
@@ -200,12 +209,12 @@ func (w *Wire) ProcessStream(ctx context.Context, r io.Reader, event *v1event.Ev
 	}
 
 	event.Response = stringsBuilder.String()
-	event.DurationMs = time.Since(event.StartTime).Milliseconds()
 }
 
-func New(s sender.V1Sender) *Wire {
+func New(sender sender.V1Sender, saver saver.V1Saver) *Wire {
 	return &Wire{
-		sender:    s,
+		sender:    sender,
+		saver:     saver,
 		isRunning: false,
 		mtx:       sync.RWMutex{},
 	}
