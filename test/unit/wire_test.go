@@ -12,7 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	v1dto "github.com/w-h-a/golens/api/dto/v1"
 	v1event "github.com/w-h-a/golens/api/event/v1"
-	"github.com/w-h-a/golens/internal/client/sender/mock"
+	mocksaver "github.com/w-h-a/golens/internal/client/saver/mock"
+	mocksender "github.com/w-h-a/golens/internal/client/sender/mock"
 	"github.com/w-h-a/golens/internal/service/wire"
 )
 
@@ -46,11 +47,13 @@ data: {"choices":[{"delta":{"content":" World"}}]}
 
 data: [DONE]
 `
-	sender := mock.NewSender(
-		mock.WithRspBody(mockStream),
+	sender := mocksender.NewSender(
+		mocksender.WithRspBody(mockStream),
 	)
 
-	wire := wire.New(sender)
+	saver := mocksaver.NewSaver()
+
+	wire := wire.New(sender, saver)
 
 	req := &v1dto.Request{
 		Path: "/v1/chat",
@@ -63,12 +66,20 @@ data: [DONE]
 	rsp, err := wire.Tap(context.Background(), req, func() { wg.Done() })
 	require.NoError(t, err)
 
-	_, err = io.ReadAll(rsp.Body)
+	bs, err := io.ReadAll(rsp.Body)
 	require.NoError(t, err)
 
 	err = rsp.Body.Close()
 	require.NoError(t, err)
 
-	// Assert
 	wg.Wait()
+
+	// Assert
+	assert.Contains(t, string(bs), "Hello")
+	assert.Contains(t, string(bs), "World")
+	assert.Equal(t, 1, saver.Count())
+	assert.NotNil(t, saver.Captured())
+	assert.Equal(t, "gpt-4", saver.Captured().Model)
+	assert.Equal(t, "Hello World", saver.Captured().Response)
+	assert.Equal(t, 2, saver.Captured().TokenCount)
 }
