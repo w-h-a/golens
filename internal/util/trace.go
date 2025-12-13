@@ -4,7 +4,7 @@ import "context"
 
 type traceKey struct{}
 
-func WithTraceID(ctx context.Context, traceId string) context.Context {
+func WithTraceId(ctx context.Context, traceId string) context.Context {
 	return context.WithValue(ctx, traceKey{}, traceId)
 }
 

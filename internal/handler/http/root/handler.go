@@ -18,7 +18,7 @@ type rootHandler struct {
 func (h *rootHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	traceId := httphandler.GetTraceId(r)
 
-	ctx := util.WithTraceID(r.Context(), traceId)
+	ctx := util.WithTraceId(r.Context(), traceId)
 
 	req := &v1.Request{
 		Method:  r.Method,
