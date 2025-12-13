@@ -1,13 +1,19 @@
 package v1
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Event struct {
-	TraceID    string    `json:"trace_id"`
-	StartTime  time.Time `json:"start_time"`
-	DurationMs int64     `json:"duration_ms"`
-	Status     int       `json:"status_code"`
-	TokenCount int       `json:"token_count"`
-	Model      string    `json:"model"`
-	Response   string    `json:"response,omitempty"`
+	Id         string          `json:"id,omitempty" db:"id"`
+	TraceId    string          `json:"trace_id" db:"trace_id"`
+	StartTime  time.Time       `json:"start_time" db:"start_time"`
+	EndTime    time.Time       `json:"end_time" db:"end_time"`
+	DurationMs int64           `json:"duration_ms" db:"duration_ms"`
+	StatusCode int             `json:"status_code" db:"status"`
+	TokenCount int             `json:"token_count" db:"token_count"`
+	Model      string          `json:"model" db:"model"`
+	Request    json.RawMessage `json:"request,omitempty" db:"request"`
+	Response   string          `json:"response,omitempty" db:"response"`
 }

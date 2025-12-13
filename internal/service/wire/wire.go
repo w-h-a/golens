@@ -99,7 +99,7 @@ func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1d
 	traceId, _ := util.TraceIdFrom(ctx)
 
 	event := &v1event.Event{
-		TraceID:   traceId,
+		TraceId:   traceId,
 		StartTime: time.Now(),
 		Model:     "unknown",
 	}
@@ -109,7 +109,7 @@ func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1d
 		return nil, err
 	}
 
-	event.Status = rsp.StatusCode
+	event.StatusCode = rsp.StatusCode
 
 	// (see below for main highway)
 	// off-ramp whenever the tee reader pulls from LLM
@@ -127,8 +127,8 @@ func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1d
 		w.ProcessStream(ctx, pr, event)
 
 		// temporary
-		log.Printf("[Event] Trace: %s | Status: %d | Tokens: %d | Model: %s | Dur: %dms",
-			event.TraceID, event.Status, event.TokenCount, event.Model, event.DurationMs)
+		log.Printf("[Event] Trace: %s | Status: %d | Tokens: %d | Model: %s | Dur: %dms | Rsp: %s",
+			event.TraceId, event.StatusCode, event.TokenCount, event.Model, event.DurationMs, event.Response)
 	}()
 
 	wrappedBody := &pipeBody{
