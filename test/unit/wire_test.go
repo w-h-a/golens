@@ -1,6 +1,7 @@
 package unit
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"strings"
@@ -47,6 +48,8 @@ func TestTap(t *testing.T) {
 	dirty["Golens-Attribute-User-Id"] = []string{"user-123"}
 	dirty["Content-Type"] = []string{"application/json"}
 
+	inputBody := `{"model":"gpt-4","messages":[{"role":"user","content":"Hello"}]}`
+
 	mockStream := `data: {"model":"gpt-4","choices":[{"delta":{"content":"Hello"}}]}
 
 data: {"choices":[{"delta":{"content":" World"}}]}
@@ -64,6 +67,7 @@ data: [DONE]
 	req := &v1dto.Request{
 		Path:    "/v1/chat",
 		Headers: dirty,
+		Body:    io.NopCloser(bytes.NewBufferString(inputBody)),
 	}
 
 	var wg sync.WaitGroup
@@ -90,10 +94,16 @@ data: [DONE]
 	assert.Equal(t, "Hello World", saver.Captured().Response)
 	assert.Equal(t, 2, saver.Captured().TokenCount)
 
+	assert.NotNil(t, saver.Captured().Request)
+	assert.JSONEq(t, inputBody, string(saver.Captured().Request))
+
 	assert.NotNil(t, saver.Captured().Attributes)
 	assert.Equal(t, "user-123", saver.Captured().Attributes["User-Id"])
 	assert.NotContains(t, saver.Captured().Attributes, "Authorization")
 	assert.NotContains(t, saver.Captured().Attributes, "Content-Type")
+
+	capturedBody, _ := io.ReadAll(sender.Captured().Body)
+	assert.JSONEq(t, inputBody, string(capturedBody))
 
 	assert.NotNil(t, sender.Captured().Headers)
 	assert.NotContains(t, sender.Captured().Headers, "Golens-Attribute-User-Id")

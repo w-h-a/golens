@@ -100,7 +100,19 @@ func (w *Wire) stop(ctx context.Context) error {
 func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1dto.Response, error) {
 	traceId, _ := util.TraceIdFrom(ctx)
 
-	// TODO: capture request body
+	bs := []byte{}
+	if req.Body != nil {
+		originalBody := req.Body
+		defer originalBody.Close()
+
+		body, err := io.ReadAll(originalBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read request body: %w", err)
+		}
+
+		bs = body
+		req.Body = io.NopCloser(bytes.NewBuffer(bs))
+	}
 
 	attributes, clean := extractAndCleanHeaders(req.Headers)
 
@@ -110,6 +122,7 @@ func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1d
 		TraceId:    traceId,
 		StartTime:  time.Now(),
 		Model:      "unknown",
+		Request:    json.RawMessage(bs),
 		Attributes: attributes,
 	}
 
