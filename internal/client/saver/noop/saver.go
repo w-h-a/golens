@@ -13,8 +13,8 @@ type noopV1Saver struct {
 }
 
 func (s *noopV1Saver) Save(ctx context.Context, event *v1.Event, opts ...saver.SaveOption) error {
-	log.Printf("--- [DB PERSISTENCE] ---\nTrace: %s\nModel: %s\nTokens: %d\nResponse: %s...\n-----------------------------",
-		event.TraceId, event.Model, event.TokenCount, saver.Truncate(event.Response, 50))
+	log.Printf("--- [DB PERSISTENCE] ---\nTrace: %s\nModel: %s\nTokens: %d\nRequest: %s...\nResponse: %s...\n-----------------------------",
+		event.TraceId, event.Model, event.TokenCount, saver.Truncate(string(event.Request), 50), saver.Truncate(event.Response, 50))
 	return nil
 }
 
