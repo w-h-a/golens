@@ -41,6 +41,12 @@ data: [DONE]`
 
 func TestTap(t *testing.T) {
 	// Arrange
+	dirty := map[string][]string{}
+
+	dirty["Authorization"] = []string{"Bearer fake-token"}
+	dirty["Golens-Attribute-User-Id"] = []string{"user-123"}
+	dirty["Content-Type"] = []string{"application/json"}
+
 	mockStream := `data: {"model":"gpt-4","choices":[{"delta":{"content":"Hello"}}]}
 
 data: {"choices":[{"delta":{"content":" World"}}]}
@@ -56,7 +62,8 @@ data: [DONE]
 	wire := wire.New(sender, saver)
 
 	req := &v1dto.Request{
-		Path: "/v1/chat",
+		Path:    "/v1/chat",
+		Headers: dirty,
 	}
 
 	var wg sync.WaitGroup
@@ -82,4 +89,14 @@ data: [DONE]
 	assert.Equal(t, "gpt-4", saver.Captured().Model)
 	assert.Equal(t, "Hello World", saver.Captured().Response)
 	assert.Equal(t, 2, saver.Captured().TokenCount)
+
+	assert.NotNil(t, saver.Captured().Attributes)
+	assert.Equal(t, "user-123", saver.Captured().Attributes["User-Id"])
+	assert.NotContains(t, saver.Captured().Attributes, "Authorization")
+	assert.NotContains(t, saver.Captured().Attributes, "Content-Type")
+
+	assert.NotNil(t, sender.Captured().Headers)
+	assert.NotContains(t, sender.Captured().Headers, "Golens-Attribute-User-Id")
+	assert.Equal(t, "Bearer fake-token", sender.Captured().Headers["Authorization"][0])
+	assert.Equal(t, "application/json", sender.Captured().Headers["Content-Type"][0])
 }
