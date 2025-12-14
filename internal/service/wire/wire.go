@@ -102,10 +102,15 @@ func (w *Wire) Tap(ctx context.Context, req *v1dto.Request, onDone func()) (*v1d
 
 	// TODO: capture request body
 
+	attributes, clean := extractAndCleanHeaders(req.Headers)
+
+	req.Headers = clean
+
 	event := &v1event.Event{
-		TraceId:   traceId,
-		StartTime: time.Now(),
-		Model:     "unknown",
+		TraceId:    traceId,
+		StartTime:  time.Now(),
+		Model:      "unknown",
+		Attributes: attributes,
 	}
 
 	rsp, err := w.sender.Send(ctx, req)
